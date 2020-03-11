@@ -1,13 +1,34 @@
 import React, { Component } from 'react';
-import { Modal, Input, DatePicker, Row, Col, Button, InputNumber, notification } from 'antd';
+import { Modal, Input, DatePicker, Row, Col, Button, InputNumber, notification, Upload, Icon, message } from 'antd';
 import moment from 'moment';
 import Event from './Models/Event';
 import API from './API';
+
+const { Dragger } = Upload;
+
+
 
 class CreateEvent extends Component<any, any>{
     format = 'HH:mm';
 
     state = { event: new Event() }
+
+     image = {
+        name: 'filename',
+        multiple: false,
+        action: `https://tachartas.herokuapp.com/${this.state.event.id}/image`,
+        onChange(info: any) {
+          const { status } = info.file;
+          if (status !== 'uploading') {
+            console.log(info.file, info.fileList);
+          }
+          if (status === 'done') {
+            message.success(`${info.file.name} file uploaded successfully.`);
+          } else if (status === 'error') {
+            message.error(`${info.file.name} file upload failed.`);
+          }
+        },
+      };   
 
     componentDidUpdate(prev: any) {
         if (prev.event.id !== this.props.event.id)
@@ -23,6 +44,8 @@ class CreateEvent extends Component<any, any>{
         this.setState(Object.assign(this.state.event, { [name]: e }));
     }
 
+
+      
 
     onDateChange = (name: string, value: any) => this.setState(Object.assign(this.state.event, { [name]: moment(value).toISOString() }));
 
@@ -68,6 +91,8 @@ class CreateEvent extends Component<any, any>{
     }
 
     render() {
+
+        console.log(this.state.event.id);
         return <Modal
             title={'Nuevo Evento'}
             visible={this.props.isVisible}
@@ -110,7 +135,21 @@ class CreateEvent extends Component<any, any>{
                     <InputNumber max={23} min={0} placeholder={'Hora fin'} value={this.state.event.end_time} onChange={(e) => this.onNumberChangeHandler(e, 'end_time')} name={'end_time'} />
                 </Col>
             </Row>
-            <Input.TextArea name={'description'} placeholder='Descripción' value={this.state.event.description} onChange={this.onChangeHandler} />
+            <Row>
+                <Input.TextArea name={'description'} placeholder='Descripción' value={this.state.event.description} onChange={this.onChangeHandler} />
+            </Row>              
+            <Row>
+                <Dragger {...this.image} method={"PUT"}>
+                    <p className="ant-upload-drag-icon">
+                        <Icon type="inbox" />
+                    </p>
+                    <p className="ant-upload-text">Click or drag file to this area to upload</p>
+                    <p className="ant-upload-hint">
+                        Support for a single or bulk upload. Strictly prohibit from uploading company data or other
+                        band files
+                    </p>
+                </Dragger>          
+            </Row>      
         </Modal>
     }
 };

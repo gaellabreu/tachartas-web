@@ -12,4 +12,6 @@ export default class Event {
     start_time:number = 0
     end_time:number = 23
     description = ''
+    category = ''
+    image_content = ''
 }

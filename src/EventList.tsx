@@ -1,8 +1,10 @@
 import React from 'react';
-import { Table, notification, Button } from 'antd';
+import { Table, notification } from 'antd';
+import { EditTwoTone, DeleteTwoTone } from '@ant-design/icons'
 import API from './API';
 import Event from './Models/Event';
 import { AxiosResponse } from 'axios';
+import moment from 'moment';
 
 export default class EventList extends React.Component<any, any> {
     state = {
@@ -12,14 +14,17 @@ export default class EventList extends React.Component<any, any> {
     columns = [
         { title: 'Nombre', dataIndex: 'name' },
         { title: 'Lugar', dataIndex: 'venue' },
-        { title: 'Fecha', dataIndex: 'date' },
+        { title: 'Fecha', dataIndex: 'date', render: (value:any) => moment(value).format('DD/MM/YYYY') },
         {
-            title: '', render: (e: any) => <Button onClick={() => {
+            title: '', render: (e: any) => <EditTwoTone twoToneColor={'purple'} onClick={() => {
                 this.props.changeEvent(e)
                 this.props.toggleVisible(true)
-            }} icon='edit' type='link' />
+            }}/>
         },
-        { title: '', render: () => <Button icon='delete' type='danger' /> },
+        { title: '', render: () => <DeleteTwoTone twoToneColor={'red'} onClick={() => notification.error({
+            message: 'NOT IMPLEMENTED',
+            description: 'DELETE FEATURE NOT READY'
+        })}/> },
     ]
 
     getEvents = () => {

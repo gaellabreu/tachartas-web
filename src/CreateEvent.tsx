@@ -1,157 +1,218 @@
-import React, { Component } from 'react';
-import { Modal, Input, DatePicker, Row, Col, Button, InputNumber, notification, Upload, Icon, message } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Modal, Input, List, DatePicker, Row, Col, Button, InputNumber, notification, Upload, message, Divider, Typography, Select } from 'antd';
+import { SaveOutlined, CloseOutlined, CloudUploadOutlined, PictureOutlined } from '@ant-design/icons'
 import moment from 'moment';
 import Event from './Models/Event';
 import API from './API';
+import { AxiosResponse } from 'axios';
 
+const { Option } = Select
 const { Dragger } = Upload;
+const { Text } = Typography
 
+interface CreateEventProps {
+    isVisible: boolean,
+    event: Event,
+    close: () => void
+}
 
+export const CreateEvent = (props: CreateEventProps) => {
 
-class CreateEvent extends Component<any, any>{
-    format = 'HH:mm';
+    const [event, changeEvent] = useState(new Event)
+    const [categories, setCateogries] = useState(new Array)
+    const [files, changeFiles] = useState(new Array)
 
-    state = { event: new Event() }
+    useEffect(() => {
+        changeEvent(props.event)
+        getCategoryList()
+    }, [props.isVisible])
 
-     image = {
+    const arrayBufferToBase64 = (buffer:any) => {
+        console.log(buffer)
+        let binary = '';
+        let bytes = new Uint8Array(buffer);
+        console.log(bytes)
+        let len = bytes.byteLength;
+        console.log(len)
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        console.log(binary)
+        return btoa(binary);
+    }
+    
+    const image = {
         name: 'filename',
         multiple: false,
-        action: `https://tachartas.herokuapp.com/${this.state.event.id}/image`,
-        onChange(info: any) {
-          const { status } = info.file;
-          if (status !== 'uploading') {
-            console.log(info.file, info.fileList);
-          }
-          if (status === 'done') {
-            message.success(`${info.file.name} file uploaded successfully.`);
-          } else if (status === 'error') {
-            message.error(`${info.file.name} file upload failed.`);
-          }
+
+        action: `https://tachartas.herokuapp.com/${event.id}/image`,
+        onChange({ file }: any) {
+            const { status } = file;
+            if (status === 'done')
+                message.success(`${file.name} file uploaded successfully.`);
+            else if (status === 'error')
+                message.error(`${file.name} file upload failed.`);
         },
-      };   
+    };
 
-    componentDidUpdate(prev: any) {
-        if (prev.event.id !== this.props.event.id)
-            this.setState({ event: this.props.event })
+    const onChangeHandler = ({ target }: any) => {
+        const { name, value }: any = target
+        changeEvent({ ...event, [name]: value })
     }
 
-    onChangeHandler = (e: any) => {
-        const { name, value } = e.target
-        this.setState(Object.assign(this.state.event, { [name]: value }))
-    }
-
-    onNumberChangeHandler = (e: any, name: string) => {
-        this.setState(Object.assign(this.state.event, { [name]: e }));
-    }
+    const onNumberChangeHandler = (e: any, name: string) => changeEvent({ ...event, [name]: e });
+    const onDateChange = (name: string, value: any) => changeEvent({ ...event, [name]: moment(value).toISOString() })
+    const onCategoryChange = (value: any) => changeEvent({ ...event, category: value})
 
 
-      
-
-    onDateChange = (name: string, value: any) => this.setState(Object.assign(this.state.event, { [name]: moment(value).toISOString() }));
-
-    saveHandler = () => {
-        if ((this.state.event.start_time > this.state.event.end_time || this.state.event.end_time < this.state.event.start_time)
-            && this.state.event.start_time
-            && this.state.event.end_time) {
+    const validateDate = () => {
+        let res = true
+        if (event.end_time && event.start_time &&
+            (event.start_time > event.end_time || event.end_time < event.start_time)) {
+            res = false
             notification.error({
                 message: 'Error en horas',
                 description: 'La hora de inicio no puede ser mayor que la hora fin, ni la hora final puede ser menor que la de inicio'
             });
-        } else if (this.state.event.id) {
-            API.put('event/' + this.state.event.id, this.state.event)
-                .then((response: any) => {
-                    notification.success({
-                        message: 'Evento actualizado',
-                        description: 'Su evento fue actualizado exitosamente'
-                    })
-                    this.props.close()
-                })
-                .catch((err: any) => notification.error(
-                    {
-                        message: 'Error al actualizar Evento',
-                        description: 'Ha ocurrido un error al tratar de actualizar su evento'
-                    }
-                ));
-        } else
-            API.post('event', this.state.event)
-                .then((response: any) => {
-                    notification.success({
-                        message: 'Evento creado',
-                        description: 'Su evento fue creado exitosamente'
-                    })
-                    this.props.close()
-                })
-                .catch((err: any) => notification.error(
-                    {
-                        message: 'Error al crear Evento',
-                        description: 'Ha ocurrido un error al tratar de crear su evento'
-                    }
-                ));
-
+        }
+        return res
     }
 
-    render() {
+    const isEventIdEmpty = () => !event.id
 
-        console.log(this.state.event.id);
-        return <Modal
-            title={'Nuevo Evento'}
-            visible={this.props.isVisible}
-            onCancel={this.props.close}
-            destroyOnClose={true}
-            footer={[
-                <Button key={1}
-                    icon={'close'}
-                    onClick={this.props.close} >Cerrar</Button>,
-                <Button key={2}
-                    icon={'save'}
-                    type={'primary'}
-                    onClick={this.saveHandler}>{this.props.event.id ? 'Actualizar' : 'Crear'}</Button>
-            ]}>
-            <Row>
-                <Input
-                    name={'name'}
-                    placeholder='Nombre'
-                    value={this.state.event.name}
-                    onChange={this.onChangeHandler} />
-            </Row>
-            <Row>
-                <Input
-                    name={'venue'}
-                    placeholder='Lugar'
-                    value={this.state.event.venue}
-                    onChange={this.onChangeHandler} />
-            </Row>
-            <Row>
-                <label >Fecha evento: </label>
-                <DatePicker placeholder={'Seleccione una fecha'} value={moment(this.state.event.date)} onChange={(e, value) => this.onDateChange('date', value)} />
-            </Row>
-            <Row>
-                <Col span={12}>
-                    <label htmlFor="start_time">Hora Inicio: </label>
-                    <InputNumber max={23} min={0} placeholder={'Hora inicio'} value={this.state.event.start_time} onChange={(e) => this.onNumberChangeHandler(e, 'start_time')} name={'start_time'} />
-                </Col>
-                <Col span={12}>
-                    <label htmlFor="end_time">Hora Fin: </label>
-                    <InputNumber max={23} min={0} placeholder={'Hora fin'} value={this.state.event.end_time} onChange={(e) => this.onNumberChangeHandler(e, 'end_time')} name={'end_time'} />
-                </Col>
-            </Row>
-            <Row>
-                <Input.TextArea name={'description'} placeholder='Descripción' value={this.state.event.description} onChange={this.onChangeHandler} />
-            </Row>              
-            <Row>
-                <Dragger {...this.image} method={"PUT"}>
-                    <p className="ant-upload-drag-icon">
-                        <Icon type="inbox" />
-                    </p>
-                    <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                    <p className="ant-upload-hint">
-                        Support for a single or bulk upload. Strictly prohibit from uploading company data or other
-                        band files
-                    </p>
-                </Dragger>          
-            </Row>      
-        </Modal>
+    const putEvent = () => API.put('event/' + event.id, event)
+        .then(() => {
+            notification.success({
+                message: 'Evento actualizado',
+                description: 'Su evento fue actualizado exitosamente'
+            })
+            props.close()
+        })
+        .catch((err: any) => notification.error(
+            {
+                message: 'Error al actualizar Evento',
+                description: 'Ha ocurrido un error al tratar de actualizar su evento'
+            }
+        ));
+
+    const postEvent = () => API.post('event', event)
+        .then(() => {
+            notification.success({
+                message: 'Evento creado',
+                description: 'Su evento fue creado exitosamente'
+            })
+            props.close()
+        })
+        .catch(() => notification.error(
+            {
+                message: 'Error al crear Evento',
+                description: 'Ha ocurrido un error al tratar de crear su evento'
+            }
+        ));
+
+    const saveHandler = () => {
+        if (!validateDate()) return
+
+        isEventIdEmpty() ? postEvent() : putEvent()
     }
-};
 
-export default CreateEvent;
+    const handleUpload = () => {
+        const formData = new FormData();
+        formData.append('filename', files[0]);
+        API.put(`https://tachartas.herokuapp.com/event/${event.id}/image`, formData)
+            .then((resp: any) => console.log(resp))
+            .catch((err: any) => console.log(err))
+    }
+
+    const getCategoryList = () => {
+        API.get('https://tachartas.herokuapp.com/category')
+            .then((resp: AxiosResponse) => setCateogries([...resp.data]))
+    }
+
+    return <Modal
+        title={event.id ? event.name : 'Nuevo Evento'}
+        visible={props.isVisible}
+        onCancel={props.close}
+        destroyOnClose={true}
+        footer={[
+            <Button key={1}
+                icon={<CloseOutlined />}
+                onClick={props.close}>Cerrar</Button>,
+            <Button key={2}
+                icon={<SaveOutlined />}
+                type={'primary'}
+                onClick={saveHandler}>{event.id ? 'Actualizar' : 'Crear'}</Button>
+        ]}>
+
+        <Text strong>Nombre</Text>
+        <Input
+            name={'name'}
+            value={event.name}
+            onChange={onChangeHandler} />
+
+        <Text strong>Lugar</Text>
+        <Input
+            name={'venue'}
+            value={event.venue}
+            onChange={onChangeHandler} />
+
+        <Text strong>Descripción</Text>
+        <Input.TextArea
+            name={'description'}
+            value={event.description} onChange={onChangeHandler} />
+
+        <Text strong>Categoría</Text> <br/>
+        <Select onSelect={onCategoryChange} defaultValue={event.category || undefined} style={{ width: '150px'}}>
+            {categories.map((c: any) => <Option value={c.id} key={c.id}>{c.description}</Option>)}
+        </Select>
+
+        <Divider />
+
+        <Row>
+            <Col span={8}>
+                <Text strong>Fecha evento</Text> <br />
+                <DatePicker
+                    placeholder={'Seleccione una fecha'}
+                    value={moment(event.date)}
+                    onChange={(e, value) => onDateChange('date', value)} />
+            </Col>
+            <Col span={8}>
+                <Text strong>Hora de inicio</Text> <br />
+                <InputNumber
+                    name={'start_time'}
+                    max={23}
+                    min={0}
+                    placeholder={'Hora inicio'}
+                    value={event.start_time}
+                    onChange={(e) => onNumberChangeHandler(e, 'start_time')} />
+            </Col>
+            <Col span={8}>
+                <Text strong>Hora de fin</Text> <br />
+                <InputNumber
+                    max={23}
+                    min={0}
+                    placeholder={'Hora fin'}
+                    value={event.end_time}
+                    onChange={(e) => onNumberChangeHandler(e, 'end_time')} name={'end_time'} />
+            </Col>
+        </Row>
+        <Row>
+            {event.image_content && <img src={`data:image/png;base64,${event.image_content}`} />}
+        </Row>
+        <Row>
+            <Upload fileList={files}
+                onRemove={(file: any) => changeFiles([])}
+                beforeUpload={(file: any, fileList: any) => {
+                    changeFiles(fileList)
+                    return false
+                }}>
+                <Button
+                    icon={<PictureOutlined />}>Seleccionar imagenes</Button>
+            </Upload>
+            <Button
+                disabled={!files.length}
+                icon={<CloudUploadOutlined />}
+                onClick={handleUpload}>Subir imagenes</Button>
+        </Row>
+    </Modal>
+}
